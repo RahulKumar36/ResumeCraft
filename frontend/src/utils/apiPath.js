@@ -1,4 +1,4 @@
-export const BASE_URL = 'http://localhost:4000'
+export const BASE_URL = 'https://resumecraft-backend-auv6.onrender.com'
 
 //Routes uded for frontend
 export const API_PATH={
