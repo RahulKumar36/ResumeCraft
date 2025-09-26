@@ -1,6 +1,6 @@
 import React from "react";
 import {Routes,Route} from 'react-router-dom'
-import LandingPage from "./pages/landingPage";
+import LandingPage from "./pages/LandingPage";
 import { Dashboard } from "./pages/Dashboard";
 import EditResume from "./components/EditResume";
 import toast, { Toaster } from "react-hot-toast";
