@@ -23,7 +23,7 @@ export const RenderResume = ({
             )
         default:
             return(
-                <TemplateOne resumeData={resumeData} containerWidth={containerWidth}/>
+                <TemplateTwo resumeData={resumeData} containerWidth={containerWidth}/>
             )    
     }
 }

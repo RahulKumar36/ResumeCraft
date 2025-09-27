@@ -14,6 +14,7 @@ import {
   skillsInfoStyles,
   workExperienceStyles
 } from "../assets/dummystyle";
+import { useState } from "react";
 
 // AdditionalInfoForm Component
 export const AdditionalInfoForm = ({ languages, interests, updateArrayItem, addArrayItem, removeArrayItem }) => {
@@ -297,8 +298,55 @@ export const EducationDetailsForm = ({ educationInfo, updateArrayItem, addArrayI
   );
 };
 
+
+
+
 // ProfileInfoForm Component
 export const ProfileInfoForm = ({ profileData, updateSection }) => {
+
+  // 1. Add state for loading and errors
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [apiError, setApiError] = useState(null);
+
+
+  // 2. Create the handler function to call your API
+  const handleGenerateSummary = async () => {
+    if (!profileData.designation) {
+      setApiError("Please fill in your job title first.");
+      return;
+    }
+
+    setIsGenerating(true);
+    setApiError(null);
+
+    try {
+      const response = await fetch('https://resumecraft-backend-auv6.onrender.com/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobTitle: profileData.designation }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate summary. Please try again.');
+      }
+
+      const data = await response.json();
+
+      // 3. Use your existing update function to set the state
+      // This is the key to seamless integration.
+      updateSection("summary", data.summary);
+
+    } catch (err) {
+      setApiError(err.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+
+
   return (
     <div className={profileInfoStyles.container}>
       <h2 className={profileInfoStyles.heading}>Personal Information</h2>
@@ -319,32 +367,98 @@ export const ProfileInfoForm = ({ profileData, updateSection }) => {
             onChange={({ target }) => updateSection("designation", target.value)}
           />
 
+
+
+
           <div className="md:col-span-2">
-            <label className="block text-sm font-bold text-gray-300 mb-3">Summary</label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-sm font-bold text-gray-300">
+                Summary
+              </label>
+              <button
+                type="button"
+                onClick={handleGenerateSummary}
+                disabled={isGenerating}
+                className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed"
+              >
+                {isGenerating ? 'Generating...' : '✨ Generate with AI'}
+              </button>
+            </div>
+
             <textarea
               className={profileInfoStyles.textarea}
               rows={4}
-              placeholder="Short introduction about yourself"
+              placeholder="A short, professional introduction about yourself."
               value={profileData.summary || ""}
               onChange={({ target }) => updateSection("summary", target.value)}
             />
+
+            {/* Optional: Display any API errors */}
+            {apiError && (
+              <p className="text-red-500 text-xs mt-1">{apiError}</p>
+            )}
           </div>
+
+
         </div>
       </div>
     </div>
   );
 };
 
-// ProjectDetailForm Component
 export const ProjectDetailForm = ({ projectInfo, updateArrayItem, addArrayItem, removeArrayItem }) => {
+  // State to track WHICH project is currently generating
+  const [generatingIndex, setGeneratingIndex] = useState(null);
+  const [apiError, setApiError] = useState(null);
+  
+
+  // The handler now accepts the index and title of the specific project
+  const handleGenerateDescription = async (index, projectTitle) => {
+    if (!projectTitle) {
+      setApiError("Please fill in the project title first.");
+      return;
+    }
+
+    setGeneratingIndex(index); // Set the loading state for this specific project
+    setApiError(null);
+
+    try {
+      const response = await fetch('https://resumecraft-backend-auv6.onrender.com/generateproject', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ projectTitle: projectTitle }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate description. Please try again.');
+      }
+
+      const data = await response.json();
+      
+
+      // Use your existing 'updateArrayItem' function to update the correct project's description
+      updateArrayItem(index, "description", data.description);
+
+      
+
+    } catch (err) {
+      setApiError(err.message);
+    } finally {
+      setGeneratingIndex(null); // Clear the loading state
+    }
+  };
+
   return (
-    <div className={projectDetailStyles.container}>
-      <h2 className={projectDetailStyles.heading}>Projects</h2>
+    <div className={projectDetailStyles.container} >
+      <h2 className={projectDetailStyles.heading} >Projects</h2>
       <div className="space-y-6 mb-6">
         {projectInfo.map((project, index) => (
-          <div key={index} className={projectDetailStyles.item}>
+          <div key={index} className={projectDetailStyles.item} >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
+                {/* Project Title Input remains the same */}
                 <Input
                   label="Project Title"
                   placeholder="Portfolio Website"
@@ -354,23 +468,35 @@ export const ProjectDetailForm = ({ projectInfo, updateArrayItem, addArrayItem, 
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-bold text-gray-300 mb-3">Description</label>
+                {/* --- NEW: Button added next to the Description Label --- */}
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-bold text-gray-300">Description</label>
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateDescription(index, project.title)}
+                    disabled={generatingIndex === index}
+                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed"
+                  >
+                    {generatingIndex === index ? 'Generating...' : '✨ Generate with AI'}
+                  </button>
+                </div>
+
                 <textarea
                   placeholder="Short description about the project"
                   className={projectDetailStyles.textarea}
-                  rows={3}
+                  rows={4}
                   value={project.description || ""}
                   onChange={({ target }) => updateArrayItem(index, "description", target.value)}
                 />
               </div>
 
+              {/* Other inputs remain the same */}
               <Input
                 label="GitHub Link"
                 placeholder="https://github.com/username/project"
                 value={project.github || ""}
                 onChange={({ target }) => updateArrayItem(index, "github", target.value)}
               />
-
               <Input
                 label="Live Demo URL"
                 placeholder="https://yourproject.live"
@@ -379,33 +505,22 @@ export const ProjectDetailForm = ({ projectInfo, updateArrayItem, addArrayItem, 
               />
             </div>
 
+            {/* Remove button remains the same */}
             {projectInfo.length > 1 && (
-              <button
-                type="button"
-                className={commonStyles.trashButton}
-                onClick={() => removeArrayItem(index)}
-              >
+              <button type="button" onClick={() => removeArrayItem(index)}>
                 <Trash2 size={16} />
               </button>
             )}
           </div>
         ))}
 
-        <button
-          type="button"
-          className={`${commonStyles.addButtonBase} ${projectDetailStyles.addButton}`}
-          onClick={() =>
-            addArrayItem({
-              title: "",
-              description: "",
-              github: "",
-              liveDemo: "",
-            })
-          }
-        >
-          <Plus size={16} />
-          Add Project
-        </button>
+        {/* Add Project button remains the same */}
+        <button type="button" className={`${commonStyles.addButtonBase} ${projectDetailStyles.addButton}`}
+          onClick={() => addArrayItem({ title: "", description: "", github: "", liveDemo: "" })}>
+          <Plus size={16} />Add Project</button>
+
+
+        {apiError && <p className="text-red-500 text-xs mt-2 text-center">{apiError}</p>}
       </div>
     </div>
   );
@@ -474,6 +589,41 @@ export const SkillsInfoForm = ({ skillsInfo, updateArrayItem, addArrayItem, remo
 
 // WorkExperienceForm Component
 export const WorkExperienceForm = ({ workExperience, updateArrayItem, addArrayItem, removeArrayItem }) => {
+  // State to track WHICH experience item is currently generating
+  const [generatingIndex, setGeneratingIndex] = useState(null);
+  const [apiError, setApiError] = useState(null);
+
+  // Handler now sends the company and role to the new endpoint
+  const handleGenerateDescription = async (index, company, role) => {
+    if (!company || !role) {
+      setApiError("Please fill in the Company and Role fields first.");
+      return;
+    }
+
+    setGeneratingIndex(index);
+    setApiError(null);
+
+    try {
+      const response = await fetch('https://resumecraft-backend-auv6.onrender.com/generate-experience', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company, role }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate description.');
+      }
+
+      const data = await response.json();
+      updateArrayItem(index, "description", data.description);
+
+    } catch (err) {
+      setApiError(err.message);
+    } finally {
+      setGeneratingIndex(null);
+    }
+  };
+
   return (
     <div className={workExperienceStyles.container}>
       <h2 className={workExperienceStyles.heading}>Work Experience</h2>
@@ -481,27 +631,25 @@ export const WorkExperienceForm = ({ workExperience, updateArrayItem, addArrayIt
         {workExperience.map((experience, index) => (
           <div key={index} className={workExperienceStyles.item}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Company, Role, and Date inputs remain the same */}
               <Input
                 label="Company"
                 placeholder="ABC Corp"
                 value={experience.company || ""}
                 onChange={({ target }) => updateArrayItem(index, "company", target.value)}
               />
-
               <Input
                 label="Role"
                 placeholder="Frontend Developer"
                 value={experience.role || ""}
                 onChange={({ target }) => updateArrayItem(index, "role", target.value)}
               />
-
               <Input
                 label="Start Date"
                 type="month"
                 value={experience.startDate || ""}
                 onChange={({ target }) => updateArrayItem(index, "startDate", target.value)}
               />
-
               <Input
                 label="End Date"
                 type="month"
@@ -511,44 +659,45 @@ export const WorkExperienceForm = ({ workExperience, updateArrayItem, addArrayIt
             </div>
 
             <div className="mt-6">
-              <label className="block text-sm font-bold text-gray-300 mb-3">Description</label>
+              {/* --- NEW: Button added next to the Description Label --- */}
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-bold text-gray-300">Description</label>
+                <button
+                  type="button"
+                  onClick={() => handleGenerateDescription(index, experience.company, experience.role)}
+                  disabled={generatingIndex === index}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-500 disabled:cursor-not-allowed"
+                >
+                  {generatingIndex === index ? 'Generating...' : '✨ Generate with AI'}
+                </button>
+              </div>
               <textarea
                 placeholder="What did you do in this role?"
                 className={workExperienceStyles.textarea}
-                rows={3}
+                rows={4}
                 value={experience.description || ""}
                 onChange={({ target }) => updateArrayItem(index, "description", target.value)}
               />
             </div>
 
+            {/* Remove button remains the same */}
             {workExperience.length > 1 && (
-              <button
-                type="button"
-                className={commonStyles.trashButton}
-                onClick={() => removeArrayItem(index)}
-              >
+              <button type="button" className={commonStyles.trashButton} onClick={() => removeArrayItem(index)}>
                 <Trash2 size={16} />
               </button>
             )}
           </div>
         ))}
-
+        
+        {/* Add button remains the same */}
         <button
           type="button"
           className={`${commonStyles.addButtonBase} ${workExperienceStyles.addButton}`}
-          onClick={() =>
-            addArrayItem({
-              company: "",
-              role: "",
-              startDate: "",
-              endDate: "",
-              description: "",
-            })
-          }
+          onClick={() => addArrayItem({ company: "", role: "", startDate: "", endDate: "", description: "" })}
         >
-          <Plus size={16} />
-          Add Work Experience
+          <Plus size={16} /> Add Work Experience
         </button>
+        {apiError && <p className="text-red-500 text-xs mt-2 text-center">{apiError}</p>}
       </div>
     </div>
   );
